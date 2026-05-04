@@ -41,7 +41,17 @@ class POI(BaseModel):
     quality_score: float = 0.0
     budget_fit: float = 0.0
     proximity_score: float = 0.0
+    interest_score: float = 0.0
+    budget_score: float = 0.0
+    hidden_gem_score: float = 0.0
+    type_quality_score: float = 0.0
     composite_score: float = 0.0
     estimated_visit_minutes: int = 60
+    geocode_confidence: float = 1.0
+    geocode_method: str = "source"
+    semantic_group_override: Optional[str] = None
+    food_role: Optional[str] = None  # "meal" | "snack" | "cafe"
+    opening_schedule: Optional[dict[str, list[tuple[int, int]]]] = None
+    opening_hours_confidence: float = 0.0
 
     model_config = {"populate_by_name": True}

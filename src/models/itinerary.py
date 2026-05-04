@@ -18,6 +18,9 @@ class ItineraryStop(BaseModel):
     travel_minutes_from_prev: float = 0.0
     visit_minutes: int = 60
     notes: str = ""  # e.g. "Festival – check agenda"
+    reason: str = ""
+    matched_interests: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class DayPlan(BaseModel):

@@ -119,6 +119,12 @@ class ChatAgent(BaseAgent):
                     lines.append(f"     {', '.join(parts)}")
                 if p.price_range and p.price_range != "Free":
                     lines.append(f"     Price: {p.price_range}")
+                if stop.reason:
+                    lines.append(f"     Why: {stop.reason}")
+                if stop.matched_interests:
+                    lines.append(f"     Matches: {', '.join(stop.matched_interests)}")
+                for warning in stop.warnings:
+                    lines.append(f"     Note: {warning}")
             lines.append(
                 f"  Summary: {int(day.total_visit_minutes)}min visiting"
                 f" + {int(day.total_travel_minutes)}min travel"

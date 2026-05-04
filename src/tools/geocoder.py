@@ -23,8 +23,11 @@ async def geocode_address(address: str) -> tuple[float | None, float | None]:
         params = {
             "address": address,
             "key": settings.google_maps_api_key,
+            "region": "vn",
+            "language": "vi",
+            "components": "country:VN",
         }
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.get(
                 "https://maps.googleapis.com/maps/api/geocode/json",
                 params=params,

@@ -15,6 +15,7 @@ from src.memory.store import MemoryStore
 from src.models.itinerary import Itinerary
 from src.models.poi import POI
 from src.models.user_input import UserInput
+from src.preferences import apply_poi_semantic_overrides
 from src.tools.knowledge_graph import KnowledgeGraphClient
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ class Orchestrator:
             logger.warning("POI file not found: %s", path)
             return []
         raw = json.loads(path.read_text(encoding="utf-8"))
-        return [POI(**item) for item in raw]
+        return [apply_poi_semantic_overrides(POI(**item)) for item in raw]
 
     def _load_festivals(self, city: str) -> list[dict]:
         path = self._data_path(city, "fest")

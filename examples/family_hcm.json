@@ -1,0 +1,20 @@
+{
+  "interests": ["local food", "park", "museum", "coffee"],
+  "trip_start": "2026-03-26",
+  "trip_end": "2026-03-30",
+  "budget_level": 2,
+  "start_location": [10.7769, 106.7009],
+  "daily_hours": 10,
+  "travel_group": "family",
+  "pace": "relaxed",
+  "mobility": "normal",
+  "has_children": true,
+  "food_restrictions": [],
+  "must_have": ["park", "local food"],
+  "avoid": ["night club"],
+  "nightlife_preference": "avoid",
+  "food_priority": "high",
+  "culture_priority": "normal",
+  "outdoor_priority": "high",
+  "start_time": "10:00"
+}
