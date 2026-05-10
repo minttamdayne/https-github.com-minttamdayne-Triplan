@@ -522,7 +522,7 @@ class RoutingAgent(BaseAgent):
         if getattr(poi, "source", "") == "festival":
             if state["festival_count"] >= MAX_FESTIVALS_PER_DAY:
                 return FAIL
-            if getattr(poi, "geocode_confidence", 1.0) <= 0.35:
+            if getattr(poi, "geocode_confidence", 1.0) < 0.35:
                 return FAIL
 
         ptype = poi.primary_type
@@ -625,10 +625,10 @@ class RoutingAgent(BaseAgent):
 
         if getattr(poi, "source", "") == "festival":
             confidence = max(0.0, min(1.0, getattr(poi, "geocode_confidence", 1.0)))
-            if confidence <= 0.35:
+            if confidence < 0.35:
                 base -= 2.0
             else:
-                base += FESTIVAL_BOOST * (0.75 + 0.25 * confidence)
+                base += FESTIVAL_BOOST * (0.55 + 0.45 * confidence)
 
         return base
 

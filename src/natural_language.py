@@ -393,7 +393,7 @@ def _parse_interests(text: str) -> list[str]:
     ]
     interests: list[str] = []
     for needle, interest in mapping:
-        if needle in text and interest not in interests:
+        if _contains_term(text, needle) and interest not in interests:
             interests.append(interest)
     return interests
 
@@ -412,9 +412,13 @@ def _parse_themes(text: str, interests: list[str]) -> list[str]:
     }
     haystack = " ".join([text, *interests])
     for theme, needles in mapping.items():
-        if any(needle in haystack for needle in needles):
+        if any(_contains_term(haystack, needle) for needle in needles):
             themes.append(theme)
     return themes
+
+
+def _contains_term(text: str, term: str) -> bool:
+    return re.search(rf"(?<!\w){re.escape(term)}(?!\w)", text) is not None
 
 
 def _parse_vibes(text: str) -> list[str]:

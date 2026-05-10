@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -49,6 +50,9 @@ class POI(BaseModel):
     estimated_visit_minutes: int = 60
     geocode_confidence: float = 1.0
     geocode_method: str = "source"
+    dates: Optional[list[date]] = None
+    event_start_date: Optional[date] = None
+    event_end_date: Optional[date] = None
     semantic_group_override: Optional[str] = None
     food_role: Optional[str] = None  # "meal" | "snack" | "cafe"
     opening_schedule: Optional[dict[str, list[tuple[int, int]]]] = None

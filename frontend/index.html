@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Triplan</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="planner-panel" aria-labelledby="planner-title">
+        <div class="brand-row">
+          <div>
+            <p class="eyebrow">AI Trip Planner</p>
+            <h1 id="planner-title">Triplan</h1>
+          </div>
+          <span class="status-pill" id="apiStatus">Đang kiểm tra API</span>
+        </div>
+
+        <form id="tripForm" class="trip-form">
+          <label class="field field-wide">
+            <span>Sở thích</span>
+            <textarea
+              id="interests"
+              rows="3"
+              placeholder="ẩm thực địa phương, bảo tàng, cà phê, công viên"
+              required
+            >ẩm thực địa phương, bảo tàng, cà phê, công viên</textarea>
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Ngày bắt đầu</span>
+              <input id="startDate" type="date" required />
+            </label>
+            <label class="field">
+              <span>Ngày kết thúc</span>
+              <input id="endDate" type="date" required />
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Vĩ độ xuất phát</span>
+              <input id="latitude" type="number" step="0.000001" value="10.7769" required />
+            </label>
+            <label class="field">
+              <span>Kinh độ xuất phát</span>
+              <input id="longitude" type="number" step="0.000001" value="106.7009" required />
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Ngân sách</span>
+              <select id="budgetLevel">
+                <option value="0">Miễn phí</option>
+                <option value="1">Tiết kiệm</option>
+                <option value="2" selected>Vừa phải</option>
+                <option value="3">Thoải mái</option>
+                <option value="4">Cao cấp</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Nhóm đi</span>
+              <select id="travelGroup">
+                <option value="solo">Một mình</option>
+                <option value="couple">Cặp đôi</option>
+                <option value="family" selected>Gia đình</option>
+                <option value="friends">Bạn bè</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Nhịp độ</span>
+              <select id="pace">
+                <option value="relaxed">Thong thả</option>
+                <option value="balanced" selected>Cân bằng</option>
+                <option value="intense">Dày lịch</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Bắt đầu mỗi ngày</span>
+              <input id="startTime" type="time" value="09:00" required />
+            </label>
+          </div>
+
+          <div class="compact-row">
+            <label class="checkbox-line">
+              <input id="hasChildren" type="checkbox" />
+              <span>Có trẻ em</span>
+            </label>
+            <label class="checkbox-line">
+              <input id="limitedMobility" type="checkbox" />
+              <span>Hạn chế di chuyển</span>
+            </label>
+          </div>
+
+          <label class="field field-wide">
+            <span>Ghi chú thêm</span>
+            <textarea
+              id="freeText"
+              rows="3"
+              placeholder="Ví dụ: muốn ăn trưa gần trung tâm, tránh nơi quá đông, ưu tiên trải nghiệm địa phương"
+            ></textarea>
+          </label>
+
+          <button class="primary-button" id="planButton" type="submit">
+            <span>Lập lịch trình</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="results-panel" aria-live="polite">
+        <div class="map-strip" aria-hidden="true">
+          <div class="route-line"></div>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="results-header">
+          <div>
+            <p class="eyebrow">Lịch trình</p>
+            <h2 id="resultTitle">Sẵn sàng lên kế hoạch</h2>
+          </div>
+          <button class="secondary-button" id="resetButton" type="button">Làm mới</button>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <h3>Nhập thông tin chuyến đi để tạo lịch trình TP.HCM.</h3>
+          <p>Kết quả sẽ hiện theo từng ngày, kèm thời gian đến, điểm tham quan, ghi chú và cảnh báo nếu có.</p>
+        </div>
+
+        <div id="loadingState" class="loading-state hidden">
+          <div class="loader"></div>
+          <p>Đang gọi planner và sắp xếp các điểm dừng...</p>
+        </div>
+
+        <div id="errorState" class="error-state hidden"></div>
+        <div id="summaryStats" class="summary-stats hidden"></div>
+        <div id="itineraryView" class="itinerary-view"></div>
+
+        <aside id="chatPanel" class="chat-panel hidden" aria-labelledby="chat-title">
+          <div class="chat-header">
+            <div>
+              <p class="eyebrow">Trợ lý lịch trình</p>
+              <h3 id="chat-title">Hỏi thêm về chuyến đi</h3>
+            </div>
+          </div>
+          <div id="chatMessages" class="chat-messages"></div>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" type="text" placeholder="Ví dụ: đổi ngày 2 nhẹ nhàng hơn" autocomplete="off" />
+            <button type="submit">Gửi</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

@@ -3,7 +3,7 @@ import json
 import re
 import asyncio
 import hashlib
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from src.agents.base import BaseAgent
@@ -66,48 +66,75 @@ class FestivalAgent(BaseAgent):
         self.memory.set("enriched_festivals", enriched_pois)
         return enriched_pois
 
-    # ── Xử lý Regex Parsing (Đã sửa lỗi IndexError) ──
     def _parse_time(self, time_str: str, default_year: int) -> tuple[date | None, date | None]:
-        if not time_str.strip(): return None, None
-        ts = time_str.strip()
+        """Parse HCM_FEST date strings into inclusive start/end dates.
 
-        patterns = [
-            # 1. Định dạng: 15/10/2025 - 28/2/2026 (6 nhóm)
-            (r"(\d+)/(\d+)/(\d{4})\s*-\s*(\d+)/(\d+)/(\d{4})", 
-             lambda m: (date(int(m[2]), int(m[1]), int(m[0])), date(int(m[5]), int(m[4]), int(m[3])))),
+        Source data mixes forms such as ``26 - 29/3``, ``31/10 - 11/12/2025``,
+        ``15/10/2025 - 28/2/2026``, and ``6/11``. Missing years use the trip
+        year; a missing month on the left side inherits the right side month.
+        """
+        if not time_str.strip():
+            return None, None
+        ts = re.sub(r"\s+", " ", time_str.strip())
+        parts = [part.strip() for part in re.split(r"\s*-\s*", ts, maxsplit=1)]
 
-            # 2. Định dạng: 26 - 29/3 (3 nhóm: d1, d2, month) - ĐÃ SỬA CHỈ SỐ
-            (r"(\d+)\s*-\s*(\d+)/(\d+)$", 
-             lambda m: (date(default_year, int(m[2]), int(m[0])), date(default_year, int(m[2]), int(m[1])))),
+        try:
+            if len(parts) == 1:
+                single = self._parse_date_part(parts[0], default_year)
+                return single, single
 
-            # 3. Định dạng: 6/11 (2 nhóm: day, month)
-            (r"^(\d+)/(\d+)$", 
-             lambda m: (date(default_year, int(m[1]), int(m[0])), date(default_year, int(m[1]), int(m[0])))),
+            right = self._parse_date_part(parts[1], default_year)
+            left = self._parse_date_part(
+                parts[0],
+                default_year,
+                fallback_month=right.month,
+                fallback_year=right.year,
+            )
+            if right < left:
+                explicit_left_year = len(parts[0].split("/")) == 3
+                explicit_right_year = len(parts[1].split("/")) == 3
+                if not explicit_left_year and explicit_right_year:
+                    left = date(right.year, left.month, left.day)
+                if right < left and not explicit_right_year:
+                    right = date(right.year + 1, right.month, right.day)
+            return left, right
+        except ValueError:
+            return None, None
 
-            # 4. Định dạng: 24/2 - 31/3 (4 nhóm: d1, m1, d2, m2)
-            (r"(\d+)/(\d+)\s*-\s*(\d+)/(\d+)$", 
-             lambda m: (date(default_year, int(m[1]), int(m[0])), date(default_year, int(m[3]), int(m[2]))))
-        ]
-
-        for pattern, factory in patterns:
-            m = re.match(pattern, ts)
-            if m:
-                try: 
-                    return factory(m.groups())
-                except (ValueError, IndexError): 
-                    continue
-        
-        return None, None
+    @staticmethod
+    def _parse_date_part(
+        text: str,
+        default_year: int,
+        *,
+        fallback_month: int | None = None,
+        fallback_year: int | None = None,
+    ) -> date:
+        bits = [int(bit) for bit in text.split("/") if bit.strip()]
+        if len(bits) == 1:
+            if fallback_month is None:
+                raise ValueError("single-day date needs a fallback month")
+            return date(fallback_year or default_year, fallback_month, bits[0])
+        if len(bits) == 2:
+            return date(fallback_year or default_year, bits[1], bits[0])
+        if len(bits) == 3:
+            return date(bits[2], bits[1], bits[0])
+        raise ValueError(f"unsupported festival date: {text}")
 
     @staticmethod
     def _overlaps(fest_start: date, fest_end: date, trip_start: date, trip_end: date) -> bool:
         return fest_start <= trip_end and fest_end >= trip_start
 
+    @staticmethod
+    def _inclusive_dates(start_dt: date, end_dt: date) -> list[date]:
+        return [start_dt + timedelta(days=offset) for offset in range((end_dt - start_dt).days + 1)]
+
     # ── Làm giàu dữ liệu (Parallel Enrichment) ──
     async def _enrich_festival(self, fest: RawFestival, start_dt: date, end_dt: date, user_input: UserInput) -> POI | None:
         # Kiểm tra Cache trước
-        cached = self.memory.cache_get("festivals", fest.name)
-        if cached: return POI(**cached["value"])
+        cache_key = f"{fest.name}:{start_dt.isoformat()}:{end_dt.isoformat()}"
+        cached = self.memory.cache_get("festivals", cache_key)
+        if cached:
+            return apply_poi_semantic_overrides(POI(**cached["value"]))
 
         full_address = f"{fest.ward or ''}, {fest.commune or ''}, {fest.province}, Vietnam".strip(", ")
 
@@ -129,11 +156,14 @@ class FestivalAgent(BaseAgent):
             address=full_address,
             primaryType="tourist_attraction",
             types=types,
-            openingHours=[OpeningHours(days=f"{start_dt} - {end_dt}", open="09:00", close="21:00")],
+            openingHours=[OpeningHours(days="Every day", open="09:00", close="21:00")],
             source="festival",
             estimated_visit_minutes=visit_min,
             geocode_confidence=confidence,
             geocode_method=method,
+            dates=self._inclusive_dates(start_dt, end_dt),
+            event_start_date=start_dt,
+            event_end_date=end_dt,
         )
 
         self.logger.info(
@@ -146,7 +176,7 @@ class FestivalAgent(BaseAgent):
         )
 
         poi = apply_poi_semantic_overrides(poi)
-        self.memory.cache_set("festivals", fest.name, poi.model_dump())
+        self.memory.cache_set("festivals", cache_key, poi.model_dump(mode="json"))
         return poi
 
     async def _resolve_location(
